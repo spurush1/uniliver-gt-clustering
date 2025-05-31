@@ -11,9 +11,8 @@ class GameTheoryClusterer:
     def utility(self, coalition):
         if not coalition:
             return 0
-        pairwise = self.dist_matrix[np.ix_(coalition, coalition)]
-        sim_sum = np.exp(-pairwise ** 2 / self.gamma).sum()
-        return sim_sum / 2
+        sims = np.exp(-self.dist_matrix[np.ix_(coalition, coalition)] ** 2 / self.gamma)
+        return sims.sum() / 2
 
     def shapley_values(self):
         n = len(self.data)
@@ -27,7 +26,7 @@ class GameTheoryClusterer:
                 shapley[i][j] = u_ij - u_i
         return shapley
 
-    def fit(self, threshold=0.5):
+    def fit(self, threshold=0.4):
         n = len(self.data)
         labels = -np.ones(n, dtype=int)
         cluster_id = 0
