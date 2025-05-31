@@ -20,4 +20,6 @@ def full_preprocess(df):
 
     pipeline = Pipeline([("prep", ct)])
     X = pipeline.fit_transform(df)
-    return X, pd.DataFrame(X.toarray() if hasattr(X, "toarray") else X)
+    if hasattr(X, "toarray"):
+        X = X.toarray()
+    return X, pd.DataFrame(X)

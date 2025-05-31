@@ -15,7 +15,7 @@ class GameTheoryClusterer:
         return sims.sum() / 2
 
     def shapley_values(self):
-        n = len(self.data)
+        n = self.data.shape[0]
         shapley = np.zeros((n, n))
         for i in range(n):
             for j in range(n):
@@ -27,7 +27,7 @@ class GameTheoryClusterer:
         return shapley
 
     def fit(self, threshold=0.4):
-        n = len(self.data)
+        n = self.data.shape[0]
         labels = -np.ones(n, dtype=int)
         cluster_id = 0
         unassigned = set(range(n))
