@@ -12,9 +12,9 @@ from plotly.subplots import make_subplots
 import warnings
 warnings.filterwarnings('ignore')
 
-from app.services.preprocess import prepare_features, full_preprocess
-from app.services.traditional import run_kmeans, run_dbscan, run_agglomerative, auto_tune_dbscan, determine_optimal_clusters
-from app.models.game_theory import GameTheoryClusterer
+from services.preprocess import prepare_features, full_preprocess
+from services.traditional import run_kmeans, run_dbscan, run_agglomerative, auto_tune_dbscan, determine_optimal_clusters
+from models.game_theory import GameTheoryClusterer
 
 # Page configuration
 st.set_page_config(
