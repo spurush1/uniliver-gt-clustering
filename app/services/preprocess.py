@@ -20,6 +20,9 @@ def full_preprocess(df):
 
     pipeline = Pipeline([("prep", ct)])
     X = pipeline.fit_transform(df)
+
+    # Convert to dense if sparse
     if hasattr(X, "toarray"):
         X = X.toarray()
+
     return X, pd.DataFrame(X)
