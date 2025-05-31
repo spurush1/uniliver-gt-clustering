@@ -86,7 +86,7 @@ def determine_optimal_clusters(X, max_clusters=10):
     """
     from sklearn.metrics import silhouette_score
     
-    X = _validate_clustering_input(X)
+    X = validate_clustering_input(X)
     inertias = []
     silhouette_scores = []
     cluster_range = range(2, min(max_clusters + 1, X.shape[0]))

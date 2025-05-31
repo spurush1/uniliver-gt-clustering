@@ -15,21 +15,8 @@ class GameTheoryClusterer:
             gamma: Temperature parameter for similarity function
             similarity_metric: 'euclidean' or 'cosine'
         """
-        # Ensure data is dense and validate
-        if sparse.issparse(data):
-            data = data.toarray()
-        self.data = np.asarray(data, dtype=np.float64)
-        
-        # Validate input
-        if self.data.ndim != 2:
-            raise ValueError(f"Input must be 2D array, got {self.data.ndim}D")
-        if self.data.shape[0] == 0:
-            raise ValueError("Input array is empty")
-        if self.data.shape[1] == 0:
-            raise ValueError("Input array has no features")
-        if not np.isfinite(self.data).all():
-            raise ValueError("Input contains NaN or infinite values")
-            
+        # Validate and ensure data is dense using our utility functions
+        self.data = validate_clustering_input(data)
         self.gamma = gamma
         self.n_samples = self.data.shape[0]
         self.similarity_metric = similarity_metric
