@@ -109,15 +109,8 @@ if df is not None:
     try:
         X_full, df_encoded = full_preprocess(df)
         st.sidebar.success(f"✅ Data preprocessed: {X_full.shape[1]} features")
-        
-        # Additional validation
-        if X_full is None or X_full.shape[0] == 0:
-            st.error("Preprocessed data is empty")
-            st.stop()
-            
     except Exception as e:
         st.error(f"Error preprocessing data: {str(e)}")
-        st.error("Please check your data format and try again.")
         st.stop()
 
     # Parameters
@@ -148,13 +141,8 @@ if df is not None:
             status_text.text("🎮 Running Game Theory clustering...")
             progress_bar.progress(20)
             
-            try:
-                gt_model = GameTheoryClusterer(X_full, gamma=gt_gamma, similarity_metric=gt_similarity)
-                gt_labels = gt_model.fit(threshold=gt_threshold, max_coalition_size=8)
-            except Exception as e:
-                st.error(f"Error in Game Theory clustering: {str(e)}")
-                st.error("Please try adjusting the parameters or check your data.")
-                st.stop()
+            gt_model = GameTheoryClusterer(X_full, gamma=gt_gamma, similarity_metric=gt_similarity)
+            gt_labels = gt_model.fit(threshold=gt_threshold, max_coalition_size=8)
             
             results['Game Theory'] = {
                 'labels': gt_labels,

@@ -154,7 +154,7 @@ if df is not None:
             except Exception as e:
                 st.error(f"Error in Game Theory clustering: {str(e)}")
                 st.error("Please try adjusting the parameters or check your data.")
-                st.stop()
+                return
             
             results['Game Theory'] = {
                 'labels': gt_labels,

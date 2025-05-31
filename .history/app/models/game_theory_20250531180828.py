@@ -19,8 +19,10 @@ class GameTheoryClusterer:
             gamma: Temperature parameter for similarity function
             similarity_metric: 'euclidean' or 'cosine'
         """
-        # Validate and ensure data is dense using our utility functions
-        self.data = validate_clustering_input(data)
+        # Ensure data is dense
+        if sparse.issparse(data):
+            data = data.toarray()
+        self.data = np.asarray(data, dtype=np.float64)
         self.gamma = gamma
         self.n_samples = self.data.shape[0]
         self.similarity_metric = similarity_metric
