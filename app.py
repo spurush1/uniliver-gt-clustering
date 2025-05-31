@@ -48,7 +48,7 @@ if uploaded_file is not None:
         st.pyplot(fig)
 
         unique_labels = set(labels)
-        if len(unique_labels) > 1 and len(unique_labels) < len(X_full):
+        if len(unique_labels) > 1 and len(unique_labels) < X_full.shape[0]:
             score = silhouette_score(X_full, labels)
             st.success(f"Silhouette Score: {score:.2f}")
         else:
