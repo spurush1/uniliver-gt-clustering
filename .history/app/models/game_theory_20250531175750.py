@@ -15,21 +15,18 @@ class GameTheoryClusterer:
             gamma: Temperature parameter for similarity function
             similarity_metric: 'euclidean' or 'cosine'
         """
-        # Ensure data is dense
-        if sparse.issparse(data):
-            data = data.toarray()
-        self.data = np.asarray(data, dtype=np.float64)
+        self.data = data
         self.gamma = gamma
-        self.n_samples = self.data.shape[0]
+        self.n_samples = data.shape[0]
         self.similarity_metric = similarity_metric
         
         # Compute similarity matrix
         if similarity_metric == 'euclidean':
-            self.dist_matrix = euclidean_distances(self.data)
+            self.dist_matrix = euclidean_distances(data)
             # Convert distances to similarities
             self.similarity_matrix = np.exp(-self.dist_matrix ** 2 / (2 * self.gamma ** 2))
         else:  # cosine
-            self.similarity_matrix = cosine_similarity(self.data)
+            self.similarity_matrix = cosine_similarity(data)
             self.similarity_matrix = np.clip(self.similarity_matrix, 0, 1)  # Ensure non-negative
         
         # Set diagonal to 1 (self-similarity)

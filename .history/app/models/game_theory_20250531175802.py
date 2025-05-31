@@ -25,11 +25,11 @@ class GameTheoryClusterer:
         
         # Compute similarity matrix
         if similarity_metric == 'euclidean':
-            self.dist_matrix = euclidean_distances(self.data)
+            self.dist_matrix = euclidean_distances(data)
             # Convert distances to similarities
             self.similarity_matrix = np.exp(-self.dist_matrix ** 2 / (2 * self.gamma ** 2))
         else:  # cosine
-            self.similarity_matrix = cosine_similarity(self.data)
+            self.similarity_matrix = cosine_similarity(data)
             self.similarity_matrix = np.clip(self.similarity_matrix, 0, 1)  # Ensure non-negative
         
         # Set diagonal to 1 (self-similarity)

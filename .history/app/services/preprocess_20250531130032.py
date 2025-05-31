@@ -10,9 +10,6 @@ def prepare_features(df):
     return scaler.fit_transform(df[numeric_cols])
 
 def full_preprocess(df):
-    import numpy as np
-    from scipy import sparse
-    
     numeric = ["quantity", "price_per_unit", "total_amount", "payment_days"]
     categorical = ["material", "uom", "vendor", "country_of_origin"]
 
@@ -24,11 +21,8 @@ def full_preprocess(df):
     pipeline = Pipeline([("prep", ct)])
     X = pipeline.fit_transform(df)
 
-    # Ensure we always have dense arrays
-    if sparse.issparse(X):
+    # Convert to dense if sparse
+    if hasattr(X, "toarray"):
         X = X.toarray()
-    
-    # Convert to numpy array to ensure proper type
-    X = np.asarray(X, dtype=np.float64)
 
     return X, pd.DataFrame(X)

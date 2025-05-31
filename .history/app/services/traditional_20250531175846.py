@@ -3,25 +3,16 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 from scipy import sparse
 
-def _ensure_dense(X):
-    """Ensure array is dense"""
-    if sparse.issparse(X):
-        X = X.toarray()
-    return np.asarray(X, dtype=np.float64)
-
 def run_kmeans(X, n_clusters=3, random_state=42):
     """Run K-Means clustering"""
-    X = _ensure_dense(X)
     return KMeans(n_clusters=n_clusters, random_state=random_state, n_init=10).fit_predict(X)
 
 def run_dbscan(X, eps=0.5, min_samples=5):
     """Run DBSCAN clustering"""
-    X = _ensure_dense(X)
     return DBSCAN(eps=eps, min_samples=min_samples).fit_predict(X)
 
 def run_agglomerative(X, n_clusters=3, linkage='ward'):
     """Run Agglomerative clustering"""
-    X = _ensure_dense(X)
     return AgglomerativeClustering(n_clusters=n_clusters, linkage=linkage).fit_predict(X)
 
 def auto_tune_dbscan(X, eps_range=(0.1, 2.0), min_samples_range=(3, 10)):
@@ -30,7 +21,6 @@ def auto_tune_dbscan(X, eps_range=(0.1, 2.0), min_samples_range=(3, 10)):
     """
     from sklearn.metrics import silhouette_score
     
-    X = _ensure_dense(X)
     best_score = -1
     best_params = None
     best_labels = None
@@ -70,7 +60,6 @@ def determine_optimal_clusters(X, max_clusters=10):
     """
     from sklearn.metrics import silhouette_score
     
-    X = _ensure_dense(X)
     inertias = []
     silhouette_scores = []
     cluster_range = range(2, min(max_clusters + 1, X.shape[0]))
