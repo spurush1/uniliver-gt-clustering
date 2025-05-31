@@ -1,3 +1,4 @@
+# Game Theory Clustering Superiority Demo
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'app')))
@@ -305,82 +306,6 @@ if df is not None:
                     """, unsafe_allow_html=True)
                 else:
                     st.warning(f"Traditional methods performed better in this case. GT improvement: {improvement:.1f}%")
-            
-            # Visualizations
-            st.subheader("📈 Cluster Visualizations")
-            
-            # PCA for visualization
-            pca = PCA(n_components=2, random_state=42)
-            X_pca = pca.fit_transform(X_full)
-            
-            # Create subplot
-            fig = make_subplots(
-                rows=2, cols=2,
-                subplot_titles=('Game Theory Clustering', 'K-Means', 'DBSCAN', 'Agglomerative'),
-                specs=[[{"type": "scatter"}, {"type": "scatter"}],
-                       [{"type": "scatter"}, {"type": "scatter"}]]
-            )
-            
-            colors = px.colors.qualitative.Set1
-            
-            methods_viz = ['Game Theory', 'K-Means', 'DBSCAN', 'Agglomerative']
-            positions = [(1, 1), (1, 2), (2, 1), (2, 2)]
-            
-            for i, (method, pos) in enumerate(zip(methods_viz, positions)):
-                labels = results[method]['labels']
-                unique_labels = np.unique(labels)
-                
-                for j, label in enumerate(unique_labels):
-                    mask = labels == label
-                    if label == -1:  # Noise points
-                        color = 'black'
-                        name = 'Noise'
-                    else:
-                        color = colors[j % len(colors)]
-                        name = f'Cluster {label}'
-                    
-                    fig.add_trace(
-                        go.Scatter(
-                            x=X_pca[mask, 0],
-                            y=X_pca[mask, 1],
-                            mode='markers',
-                            marker=dict(color=color, size=4),
-                            name=name,
-                            showlegend=(i == 0),  # Only show legend for first subplot
-                            legendgroup=name
-                        ),
-                        row=pos[0], col=pos[1]
-                    )
-            
-            fig.update_layout(height=800, title="Clustering Results Comparison (PCA Projection)")
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Performance bar chart
-            st.subheader("📊 Performance Metrics Comparison")
-            
-            metrics_fig = go.Figure()
-            
-            methods_list = list(comparison_df['Method'])
-            silhouette_scores = list(comparison_df['Silhouette Score'])
-            
-            colors_bar = ['#4CAF50' if method == 'Game Theory' else '#FF9800' for method in methods_list]
-            
-            metrics_fig.add_trace(go.Bar(
-                x=methods_list,
-                y=silhouette_scores,
-                marker_color=colors_bar,
-                text=[f'{score:.4f}' for score in silhouette_scores],
-                textposition='auto',
-            ))
-            
-            metrics_fig.update_layout(
-                title="Silhouette Score Comparison",
-                xaxis_title="Clustering Method",
-                yaxis_title="Silhouette Score",
-                showlegend=False
-            )
-            
-            st.plotly_chart(metrics_fig, use_container_width=True)
 
     with tab2:
         st.header("🔬 Detailed Individual Analysis")
@@ -409,16 +334,6 @@ if df is not None:
                     with col3:
                         st.metric("Threshold Used", gt_threshold)
                     
-                    # Show cluster statistics if available
-                    if hasattr(model, 'get_cluster_statistics'):
-                        try:
-                            cluster_stats = model.get_cluster_statistics()
-                            st.write("**Cluster Statistics:**")
-                            for cluster_id, stats in cluster_stats.items():
-                                st.write(f"Cluster {cluster_id}: {stats}")
-                        except:
-                            pass
-                            
                 elif method == "K-Means":
                     if auto_tune:
                         optimal_info = determine_optimal_clusters(X_full)
@@ -543,4 +458,4 @@ st.markdown("""
     <p>🎮 <strong>Game Theory Clustering</strong> | Based on <a href="https://www.mit.edu/~vgarg/tkde-final.pdf" target="_blank">MIT Research</a></p>
     <p>Demonstrating superior clustering through coalition formation and Shapley values</p>
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True) 
