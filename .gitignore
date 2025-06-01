@@ -44,3 +44,21 @@ Thumbs.db
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Development history and temporary files
+.history/
+*.tmp
+*.temp
+*~
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Data files (keep only essential ones)
+*.csv.bak
+*.xlsx.bak
+
+# Presentation drafts (keep only final versions)
+*_draft.*
+*_old.*
+*_backup.*

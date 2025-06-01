@@ -1,9 +1,0 @@
-# Required Python libraries
-fastapi
-uvicorn
-scikit-learn
-numpy
-pandas
-matplotlib
-seaborn
-streamlit
