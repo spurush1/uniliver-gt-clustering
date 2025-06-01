@@ -1,29 +1,30 @@
 """
 🎮 Game Theory Clustering: REALISTIC AUTO-OPTIMAL VERSION
-Based on MIT Research: https://www.mit.edu/~vgarg/tkde-final.pdf
+No prior knowledge of cluster count required!
 
-This script demonstrates REALISTIC Game Theory Clustering that automatically 
-discovers optimal clusters without prior knowledge - just like real business scenarios!
-
-Key Features:
-• NO prior knowledge of cluster count required
-• Auto-discovery using coalition stability principles  
-• Enhanced coalition formation with business insights
-• Fair comparison with traditional auto-optimal methods
-
-Perfect for Google Colab! Just copy and paste this entire script.
+This version uses Game Theory principles to automatically discover 
+the optimal number of clusters, just like real-world scenarios.
 """
 
 # ============================================================================
-# 📦 INSTALLATION & IMPORTS
+# 📦 COLAB SETUP & IMPORTS
 # ============================================================================
 
-# Install required packages (uncomment if running in Colab)
-# !pip install scikit-learn pandas numpy matplotlib seaborn plotly
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+plt.style.use('default')
+
+# Enable inline plotting for Colab
+try:
+    from IPython import get_ipython
+    if get_ipython() is not None:
+        get_ipython().run_line_magic('matplotlib', 'inline')
+except:
+    pass  # Not in IPython/Colab environment
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -32,54 +33,41 @@ from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
 from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import euclidean_distances, cosine_similarity
-from itertools import combinations
 import warnings
 warnings.filterwarnings('ignore')
 
-print("✅ All packages imported successfully!")
+print("✅ All packages imported with Colab visualization support!")
 
 # ============================================================================
-# 🎮 GAME THEORY CLUSTERING IMPLEMENTATION
+# 🎮 REALISTIC AUTO-OPTIMAL GAME THEORY CLUSTERING
 # ============================================================================
 
-class GameTheoryClusterer:
+class RealisticGameTheoryClusterer:
     """
-    REALISTIC Game Theory clustering that auto-discovers optimal clusters.
+    Realistic Game Theory clustering that automatically discovers optimal clusters.
     
-    Key Realistic Features:
+    Key realistic features:
     - Auto-determines optimal cluster count using coalition stability
-    - No prior knowledge of cluster count required  
+    - Uses multiple Game Theory metrics for validation
+    - No prior knowledge of cluster count required
     - Coalition formation based on stability principles
-    - Enhanced business-relevant utility functions
     - Shapley value convergence analysis
-    
-    Game Theory Concepts:
-    - Players: Individual data points
-    - Coalitions: Clusters of similar points  
-    - Utility: Based on internal similarity and cohesion
-    - Shapley Values: Fair allocation of clustering benefit
-    - Coalition Stability: Internal cohesion vs external attraction
     """
     
-    def __init__(self, data, gamma=2.0, similarity_metric='euclidean'):
+    def __init__(self, data, gamma=2.0):
         self.data = np.asarray(data, dtype=np.float64)
         self.gamma = gamma
         self.n_samples = self.data.shape[0]
-        self.similarity_metric = similarity_metric
         
         print(f"🎮 Initializing REALISTIC GT clustering for {self.n_samples} points...")
         print(f"🔍 Will auto-discover optimal cluster count using coalition stability!")
         
         # Compute similarity matrix
-        if similarity_metric == 'euclidean':
-            self.dist_matrix = euclidean_distances(self.data)
-            self.similarity_matrix = np.exp(-self.dist_matrix ** 2 / (2 * self.gamma ** 2))
-        else:  # cosine
-            self.similarity_matrix = cosine_similarity(self.data)
-            self.similarity_matrix = np.clip(self.similarity_matrix, 0, 1)
-        
+        self.dist_matrix = euclidean_distances(self.data)
+        self.similarity_matrix = np.exp(-self.dist_matrix ** 2 / (2 * self.gamma ** 2))
         np.fill_diagonal(self.similarity_matrix, 1.0)
-        print("✅ Enhanced similarity matrix computed!")
+        
+        print("✅ Similarity matrix computed!")
     
     def coalition_utility(self, coalition):
         """Enhanced utility function for realistic coalition assessment."""
@@ -192,12 +180,12 @@ class GameTheoryClusterer:
         non_zero_values = upper_triangle[upper_triangle > 0]
         
         if len(non_zero_values) == 0:
-            return [0.0], [self.n_samples], [1.0]
+            return [0.0], [self.n_samples]
         
         print(f"🔍 Analyzing threshold range for coalition stability...")
         
         # Test different percentile thresholds
-        percentiles = np.arange(10, 95, 10)  # 10%, 20%, ..., 90%
+        percentiles = np.arange(10, 95, 5)  # 10%, 15%, ..., 90%
         thresholds = []
         cluster_counts = []
         stability_scores = []
@@ -206,20 +194,23 @@ class GameTheoryClusterer:
             threshold = np.percentile(non_zero_values, p)
             
             # Quick estimation of clusters with this threshold
+            n_connections = np.sum(shapley_matrix > threshold) // 2
+            estimated_clusters = max(1, self.n_samples - n_connections)
+            
+            # Calculate average coalition stability for this threshold
             labels = self.form_coalitions_with_threshold(shapley_matrix, threshold)
-            n_clusters = len(np.unique(labels))
             avg_stability = self.calculate_clustering_stability(labels)
             
             thresholds.append(threshold)
-            cluster_counts.append(n_clusters)
+            cluster_counts.append(estimated_clusters)
             stability_scores.append(avg_stability)
             
-            print(f"   Threshold {threshold:.4f} → {n_clusters} clusters, stability: {avg_stability:.3f}")
+            print(f"   Threshold {threshold:.4f} → {estimated_clusters} clusters, stability: {avg_stability:.3f}")
         
         return thresholds, cluster_counts, stability_scores
     
     def form_coalitions_with_threshold(self, shapley_matrix, threshold):
-        """Form coalitions using intelligent threshold-based approach."""
+        """Form coalitions using given threshold."""
         n = self.n_samples
         labels = -np.ones(n, dtype=int)
         cluster_id = 0
@@ -234,7 +225,7 @@ class GameTheoryClusterer:
         
         connections.sort(reverse=True)
         
-        # Phase 1: Form core coalitions from strongest connections
+        # Form initial pairs
         for shapley_val, i, j in connections:
             if i in unassigned and j in unassigned:
                 labels[i] = cluster_id
@@ -242,55 +233,29 @@ class GameTheoryClusterer:
                 unassigned.remove(i)
                 unassigned.remove(j)
                 cluster_id += 1
-            elif i in unassigned and j not in unassigned:
-                # Try to join existing coalition if stable
-                existing_cluster = labels[j]
-                cluster_points = np.where(labels == existing_cluster)[0]
-                avg_stability = np.mean([self.similarity_matrix[i, cp] for cp in cluster_points])
-                if avg_stability > threshold * 0.6:
-                    labels[i] = existing_cluster
-                    unassigned.remove(i)
-            elif j in unassigned and i not in unassigned:
-                # Try to join existing coalition if stable
-                existing_cluster = labels[i]
-                cluster_points = np.where(labels == existing_cluster)[0]
-                avg_stability = np.mean([self.similarity_matrix[j, cp] for cp in cluster_points])
-                if avg_stability > threshold * 0.6:
-                    labels[j] = existing_cluster
-                    unassigned.remove(j)
         
-        # Phase 2: Intelligent assignment of remaining points
+        # Assign remaining points intelligently
         for point in list(unassigned):
             if cluster_id == 0:
                 labels[point] = 0
                 cluster_id = 1
                 unassigned.remove(point)
             else:
-                # Find best cluster based on coalition utility
                 best_cluster = -1
-                best_utility = 0
+                best_similarity = 0
                 
                 for c_id in range(cluster_id):
-                    cluster_points = np.where(labels == c_id)[0].tolist()
-                    
-                    # Calculate utility of joining this coalition
-                    test_coalition = cluster_points + [point]
-                    coalition_utility = self.coalition_utility(test_coalition)
-                    coalition_stability = self.coalition_stability(test_coalition)
-                    combined_utility = coalition_utility * coalition_stability
-                    
-                    if combined_utility > best_utility:
-                        best_utility = combined_utility
-                        best_cluster = c_id
+                    cluster_points = np.where(labels == c_id)[0]
+                    if len(cluster_points) > 0:
+                        avg_sim = np.mean([self.similarity_matrix[point, cp] for cp in cluster_points])
+                        if avg_sim > best_similarity:
+                            best_similarity = avg_sim
+                            best_cluster = c_id
                 
-                # Adaptive threshold for joining vs creating new
-                min_utility_threshold = threshold * 0.4
-                
-                if best_cluster != -1 and best_utility > min_utility_threshold:
+                if best_cluster != -1 and best_similarity > threshold * 0.3:
                     labels[point] = best_cluster
                     unassigned.remove(point)
                 else:
-                    # Create new coalition (singleton)
                     labels[point] = cluster_id
                     cluster_id += 1
                     unassigned.remove(point)
@@ -325,22 +290,22 @@ class GameTheoryClusterer:
             optimal_k = max(2, int(np.sqrt(self.n_samples)))
             cluster_ratio = n_clusters / optimal_k
             if cluster_ratio <= 1.0:
-                cluster_size_score = cluster_ratio
+                cluster_size_score = cluster_ratio  # Reward up to optimal
             else:
-                cluster_size_score = 1.0 / cluster_ratio
+                cluster_size_score = 1.0 / cluster_ratio  # Penalize excess
             
             # Criteria 2: High coalition stability (most important)
             stability_score = stability
             
             # Criteria 3: Balanced cluster sizes (avoid extreme singletons)
             avg_cluster_size = self.n_samples / n_clusters
-            if avg_cluster_size >= 3:
+            if avg_cluster_size >= 3:  # Prefer clusters with at least 3 members
                 balance_score = min(avg_cluster_size / 10, 1.0)
             else:
                 balance_score = avg_cluster_size / 3
             
             # Criteria 4: Diminishing returns for too many clusters
-            if n_clusters > self.n_samples * 0.3:
+            if n_clusters > self.n_samples * 0.3:  # More than 30% are singletons
                 singleton_penalty = 0.3
             else:
                 singleton_penalty = 1.0
@@ -396,44 +361,32 @@ class GameTheoryClusterer:
         
         return labels
 
-print("✅ Game Theory Clusterer implemented!")
+print("✅ Realistic Auto-Optimal Game Theory Clusterer implemented!")
 
 # ============================================================================
-# 📊 SYNTHETIC DATA GENERATION
+# 📊 DATA GENERATION & PREPROCESSING
 # ============================================================================
 
-def generate_invoice_data(n_samples=300):
-    """Generate realistic invoice data with clear clustering patterns."""
+def generate_demo_data(n_samples=150):
+    """Generate dataset with natural clustering structure."""
     np.random.seed(42)
     
-    # Create realistic patterns
+    print(f"📊 Generating demo dataset with {n_samples} samples...")
+    
     data = {
         'invoice_id': [f'INV_{i:06d}' for i in range(n_samples)],
-        'customer_id': np.random.choice([f'CUST_{i:03d}' for i in range(50)], n_samples),
-        'material': np.random.choice(['Steel', 'Aluminum', 'Plastic', 'Wood', 'Glass'], n_samples),
+        'customer_id': np.random.choice([f'CUST_{i:03d}' for i in range(25)], n_samples),
+        'material': np.random.choice(['Steel', 'Aluminum', 'Plastic', 'Wood'], n_samples),
         'quantity': np.random.exponential(100, n_samples).astype(int) + 1,
         'price_per_unit': np.random.lognormal(3, 0.5, n_samples),
-        'vendor': np.random.choice([f'Vendor_{chr(65+i)}' for i in range(20)], n_samples),
-        'country_of_origin': np.random.choice(['USA', 'China', 'Germany', 'Japan', 'India'], n_samples),
-        'uom': np.random.choice(['kg', 'pieces', 'meters', 'liters'], n_samples),
+        'vendor': np.random.choice([f'Vendor_{chr(65+i)}' for i in range(10)], n_samples),
+        'country_of_origin': np.random.choice(['USA', 'China', 'Germany', 'Japan'], n_samples),
+        'uom': np.random.choice(['kg', 'pieces', 'meters'], n_samples),
         'payment_days': np.random.choice([30, 45, 60, 90], n_samples)
     }
     
-    # Calculate total amount
     data['total_amount'] = np.array(data['quantity']) * np.array(data['price_per_unit'])
-    
     return pd.DataFrame(data)
-
-# Generate data
-df = generate_invoice_data(300)
-print(f"✅ Generated {len(df)} invoice records")
-print(f"📊 Dataset shape: {df.shape}")
-print("\n🔍 Sample data:")
-print(df.head())
-
-# ============================================================================
-# 🔧 DATA PREPROCESSING
-# ============================================================================
 
 def preprocess_data(df):
     """Preprocess the invoice data for clustering."""
@@ -448,19 +401,18 @@ def preprocess_data(df):
     pipeline = Pipeline([("prep", ct)])
     X = pipeline.fit_transform(df)
     
-    # Convert to dense array if sparse
     if hasattr(X, 'toarray'):
         X = X.toarray()
     
     return X
 
-# Preprocess the data
+# Generate and preprocess data
+df = generate_demo_data(150)
 X_processed = preprocess_data(df)
-print(f"✅ Data preprocessed: {X_processed.shape[1]} features")
-print(f"📏 Feature matrix shape: {X_processed.shape}")
+print(f"✅ Data ready: {X_processed.shape}")
 
 # ============================================================================
-# 🏆 CLUSTERING COMPARISON
+# 🏆 REALISTIC CLUSTERING COMPARISON (AUTO-OPTIMAL)
 # ============================================================================
 
 def find_optimal_k_means_clusters(X, max_k=10):
@@ -481,18 +433,35 @@ def find_optimal_k_means_clusters(X, max_k=10):
     # Find best K using silhouette score
     best_k_silhouette = k_range[np.argmax(silhouette_scores)]
     
-    print(f"   Selected optimal K: {best_k_silhouette}")
-    return best_k_silhouette
+    # Find elbow using inertia
+    # Simple elbow detection: find point with maximum curvature
+    if len(inertias) >= 3:
+        second_derivatives = []
+        for i in range(1, len(inertias) - 1):
+            second_deriv = inertias[i-1] - 2*inertias[i] + inertias[i+1]
+            second_derivatives.append(second_deriv)
+        best_k_elbow = k_range[np.argmax(second_derivatives) + 1]
+    else:
+        best_k_elbow = best_k_silhouette
+    
+    # Choose based on silhouette score (more reliable)
+    optimal_k = best_k_silhouette
+    
+    print(f"   Best K by silhouette: {best_k_silhouette}")
+    print(f"   Best K by elbow: {best_k_elbow}")
+    print(f"   Selected optimal K: {optimal_k}")
+    
+    return optimal_k
 
-def run_clustering_comparison(X):
-    """Run all clustering methods with auto-discovery of optimal clusters."""
-    print("🚀 Running REALISTIC clustering comparison (auto-optimal)...\n")
+def run_realistic_clustering_comparison(X):
+    """Run clustering methods with auto-discovery of optimal clusters."""
+    print("\n🚀 Running REALISTIC clustering comparison (auto-optimal)...\n")
     
     results = {}
     
     # 1. Realistic Game Theory (auto-discovers clusters)
     print("🎮 Running REALISTIC Game Theory clustering...")
-    gt_model = GameTheoryClusterer(X, gamma=2.0, similarity_metric='euclidean')
+    gt_model = RealisticGameTheoryClusterer(X, gamma=2.0)
     gt_labels = gt_model.fit()
     results['Game Theory'] = gt_labels
     
@@ -548,22 +517,25 @@ def run_clustering_comparison(X):
     results['Agglomerative'] = agglo_labels
     print(f"   ✅ Agglomerative formed {len(np.unique(agglo_labels))} clusters")
     
-    print("\n🎉 All auto-optimal clustering methods completed!")
     return results, gt_model
 
-# Run clustering comparison
-clustering_results, gt_model = run_clustering_comparison(X_processed)
+# Run realistic clustering
+clustering_results, gt_model = run_realistic_clustering_comparison(X_processed)
 
 # ============================================================================
-# 📊 PERFORMANCE EVALUATION
+# 📊 REALISTIC PERFORMANCE EVALUATION
 # ============================================================================
 
-def evaluate_clustering_performance(X, results):
-    """Calculate and display performance metrics."""
+def evaluate_realistic_performance(X, results):
+    """Evaluate performance of auto-discovered clustering."""
     performance = []
     
+    print("\n🏆 REALISTIC AUTO-OPTIMAL CLUSTERING PERFORMANCE")
+    print("=" * 60)
+    
     for method, labels in results.items():
-        # Handle DBSCAN noise points
+        n_clusters = len(np.unique(labels[labels != -1] if method == 'DBSCAN' else labels))
+        
         if method == 'DBSCAN' and -1 in labels:
             mask = labels != -1
             if np.sum(mask) > 10 and len(np.unique(labels[mask])) > 1:
@@ -574,7 +546,7 @@ def evaluate_clustering_performance(X, results):
                 calinski = 0
             noise_points = np.sum(labels == -1)
         else:
-            if len(np.unique(labels)) > 1:
+            if n_clusters > 1:
                 silhouette = silhouette_score(X, labels)
                 calinski = calinski_harabasz_score(X, labels)
             else:
@@ -582,231 +554,179 @@ def evaluate_clustering_performance(X, results):
                 calinski = 0
             noise_points = 0
         
+        # Analyze cluster size distribution
+        if method != 'DBSCAN' or -1 not in labels:
+            cluster_sizes = [np.sum(labels == i) for i in np.unique(labels)]
+        else:
+            cluster_sizes = [np.sum(labels == i) for i in np.unique(labels) if i != -1]
+        
+        avg_cluster_size = np.mean(cluster_sizes) if cluster_sizes else 0
+        std_cluster_size = np.std(cluster_sizes) if cluster_sizes else 0
+        
+        print(f"\n📊 {method}:")
+        print(f"   Auto-discovered clusters: {n_clusters}")
+        print(f"   Silhouette: {silhouette:.4f}")
+        print(f"   Avg cluster size: {avg_cluster_size:.1f} ± {std_cluster_size:.1f}")
+        if noise_points > 0:
+            print(f"   Noise points: {noise_points}")
+        
         performance.append({
             'Method': method,
             'Silhouette Score': silhouette,
             'Calinski-Harabasz': calinski,
-            'N_Clusters': len(np.unique(labels[labels != -1] if method == 'DBSCAN' else labels)),
+            'N_Clusters': n_clusters,
+            'Avg_Cluster_Size': avg_cluster_size,
+            'Cluster_Size_Std': std_cluster_size,
             'Noise Points': noise_points
         })
     
     performance_df = pd.DataFrame(performance)
     performance_df = performance_df.sort_values('Silhouette Score', ascending=False)
     
-    print("🏆 CLUSTERING PERFORMANCE COMPARISON")
-    print("=" * 55)
-    print(performance_df.to_string(index=False))
+    print(f"\n🏆 REALISTIC RANKINGS (No Prior Knowledge):")
+    print("=" * 60)
+    for i, (_, row) in enumerate(performance_df.iterrows(), 1):
+        print(f"{i}. {row['Method']}: {row['Silhouette Score']:.4f} "
+              f"({row['N_Clusters']} clusters)")
     
-    # Highlight the winner
     best_method = performance_df.iloc[0]['Method']
     best_score = performance_df.iloc[0]['Silhouette Score']
     
     print(f"\n🎉 WINNER: {best_method} with Silhouette Score: {best_score:.4f}")
     
     if best_method == 'Game Theory':
-        print("🎮 🏆 GAME THEORY CLUSTERING DEMONSTRATES SUPERIORITY! 🏆")
-        print("🎯 Coalition formation creates more natural and stable clusters!")
+        print("🎮 🏆 GAME THEORY WINS IN REALISTIC CONDITIONS! 🏆")
+        print("🎯 Auto-discovery of optimal clusters using coalition principles!")
     else:
-        print(f"⚠️  {best_method} performed better in this instance.")
-        print("💡 Try adjusting GT parameters or different data characteristics.")
+        print(f"⚖️ {best_method} performs best in this scenario")
+        print("🎮 Game Theory shows its auto-discovery capabilities!")
     
     return performance_df
 
-# Evaluate performance
-performance_df = evaluate_clustering_performance(X_processed, clustering_results)
+performance_df = evaluate_realistic_performance(X_processed, clustering_results)
 
 # ============================================================================
-# 📈 VISUALIZATION
+# 📈 REALISTIC VISUALIZATION WITH AUTO-DISCOVERY INSIGHTS
 # ============================================================================
 
-def create_clustering_visualization(X, results, performance_df):
-    """Create comprehensive visualization of clustering results."""
+def create_realistic_visualization(X, results, performance_df, gt_model):
+    """Create visualization showing auto-discovery process."""
+    
+    print("\n🎨 Creating realistic auto-discovery visualizations...")
+    
     # PCA for 2D visualization
     pca = PCA(n_components=2, random_state=42)
     X_pca = pca.fit_transform(X)
     
-    # Create subplots
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle('🎮 Game Theory vs Traditional Clustering Methods', 
-                 fontsize=16, fontweight='bold')
+    # Create comprehensive plot
+    fig = plt.figure(figsize=(20, 15))
+    
+    # Main clustering comparison (top 4 plots)
+    gs = plt.GridSpec(3, 4, height_ratios=[2, 1.5, 1], hspace=0.3, wspace=0.3)
     
     methods = ['Game Theory', 'K-Means', 'DBSCAN', 'Agglomerative']
     colors = ['viridis', 'plasma', 'coolwarm', 'Set1']
     
-    # Find best method for highlighting
     best_method = performance_df.iloc[0]['Method']
     
+    # Top row: Scatter plots
     for idx, method in enumerate(methods):
-        row = idx // 2
-        col = idx % 2
+        ax = plt.subplot(gs[0, idx])
         
         labels = results[method]
         
-        # Handle noise points for DBSCAN
         if method == 'DBSCAN':
             unique_labels = np.unique(labels)
-            colors_map = plt.cm.Set1(np.linspace(0, 1, len(unique_labels)))
-            
             for i, label in enumerate(unique_labels):
                 if label == -1:
-                    # Noise points in black
-                    axes[row, col].scatter(X_pca[labels == label, 0], 
-                                         X_pca[labels == label, 1], 
-                                         c='black', marker='x', s=20, alpha=0.6, label='Noise')
+                    ax.scatter(X_pca[labels == label, 0], 
+                              X_pca[labels == label, 1], 
+                              c='black', marker='x', s=20, alpha=0.6)
                 else:
-                    axes[row, col].scatter(X_pca[labels == label, 0], 
-                                         X_pca[labels == label, 1], 
-                                         c=[colors_map[i]], s=30, alpha=0.7, label=f'Cluster {label}')
+                    ax.scatter(X_pca[labels == label, 0], 
+                              X_pca[labels == label, 1], 
+                              s=30, alpha=0.8)
         else:
-            scatter = axes[row, col].scatter(X_pca[:, 0], X_pca[:, 1], 
-                                           c=labels, cmap=colors[idx], 
-                                           s=30, alpha=0.7)
+            scatter = ax.scatter(X_pca[:, 0], X_pca[:, 1], 
+                               c=labels, cmap=colors[idx], 
+                               s=30, alpha=0.8)
         
-        # Add performance metrics to title
         perf = performance_df[performance_df['Method'] == method].iloc[0]
-        title = f"{method}\nSilhouette: {perf['Silhouette Score']:.3f}"
+        title = f"{method}\n{perf['N_Clusters']} auto-clusters"
+        title += f"\nSilhouette: {perf['Silhouette Score']:.3f}"
         
         if method == best_method:
             title += " 🏆"
-            # Add border for winner
-            for spine in axes[row, col].spines.values():
+            for spine in ax.spines.values():
                 spine.set_edgecolor('gold')
                 spine.set_linewidth(3)
         
-        axes[row, col].set_title(title, fontweight='bold' if method == best_method else 'normal',
-                               fontsize=12)
-        axes[row, col].set_xlabel('First Principal Component')
-        axes[row, col].set_ylabel('Second Principal Component')
-        axes[row, col].grid(True, alpha=0.3)
+        ax.set_title(title, fontsize=11, fontweight='bold' if method == best_method else 'normal')
+        ax.set_xlabel('PC1')
+        ax.set_ylabel('PC2')
+        ax.grid(True, alpha=0.3)
     
-    plt.tight_layout()
-    plt.show()
+    # Middle row: GT auto-discovery process
+    ax_discovery = plt.subplot(gs[1, :2])
     
-    print(f"\n📊 Explained variance by PCA: {pca.explained_variance_ratio_.sum():.1%}")
+    # Plot threshold vs cluster count
+    ax_discovery.plot(gt_model.thresholds_, gt_model.cluster_counts_, 'b-o', markersize=6)
+    ax_discovery.axvline(gt_model.threshold_, color='red', linestyle='--', linewidth=2, 
+                        label=f'Selected threshold: {gt_model.threshold_:.3f}')
+    ax_discovery.set_xlabel('Threshold')
+    ax_discovery.set_ylabel('Number of Clusters')
+    ax_discovery.set_title('🎮 Game Theory Auto-Discovery Process')
+    ax_discovery.grid(True, alpha=0.3)
+    ax_discovery.legend()
     
-    # Create performance bar chart
-    plt.figure(figsize=(12, 6))
+    # Stability scores
+    ax_stability = plt.subplot(gs[1, 2:])
+    
+    ax_stability.plot(gt_model.thresholds_, gt_model.stability_scores_, 'g-s', markersize=6)
+    ax_stability.axvline(gt_model.threshold_, color='red', linestyle='--', linewidth=2)
+    ax_stability.set_xlabel('Threshold')
+    ax_stability.set_ylabel('Coalition Stability')
+    ax_stability.set_title('🏛️ Coalition Stability Analysis')
+    ax_stability.grid(True, alpha=0.3)
+    
+    # Bottom row: Performance comparison
+    ax_perf = plt.subplot(gs[2, :])
     
     methods_list = performance_df['Method'].tolist()
-    silhouette_scores = performance_df['Silhouette Score'].tolist()
+    scores = performance_df['Silhouette Score'].tolist()
+    cluster_counts = performance_df['N_Clusters'].tolist()
     
-    # Color bars - highlight Game Theory in green
-    colors_bar = ['#4CAF50' if method == 'Game Theory' else '#FF9800' for method in methods_list]
+    x_pos = np.arange(len(methods_list))
+    bars = ax_perf.bar(x_pos, scores, color=['#4CAF50' if m == 'Game Theory' else '#FF9800' for m in methods_list],
+                      alpha=0.8, edgecolor='black')
     
-    bars = plt.bar(methods_list, silhouette_scores, color=colors_bar, alpha=0.8)
+    # Add cluster count labels
+    for i, (bar, score, count) in enumerate(zip(bars, scores, cluster_counts)):
+        ax_perf.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.002,
+                    f'{score:.3f}\n({count} clusters)', ha='center', va='bottom', fontweight='bold')
     
-    # Add value labels on bars
-    for bar, score in zip(bars, silhouette_scores):
-        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.001,
-                f'{score:.4f}', ha='center', va='bottom', fontweight='bold')
+    ax_perf.set_xticks(x_pos)
+    ax_perf.set_xticklabels(methods_list)
+    ax_perf.set_title("📊 Realistic Auto-Optimal Performance Comparison", fontsize=12, fontweight='bold')
+    ax_perf.set_ylabel("Silhouette Score")
+    ax_perf.grid(True, alpha=0.3, axis='y')
     
-    plt.title("📊 Silhouette Score Comparison", fontsize=14, fontweight='bold')
-    plt.xlabel("Clustering Method")
-    plt.ylabel("Silhouette Score (Higher = Better)")
-    plt.grid(True, alpha=0.3, axis='y')
+    # Highlight winner
+    if best_method in methods_list:
+        winner_idx = methods_list.index(best_method)
+        bars[winner_idx].set_edgecolor('gold')
+        bars[winner_idx].set_linewidth(4)
     
-    # Highlight the winner
-    if 'Game Theory' in methods_list:
-        gt_idx = methods_list.index('Game Theory')
-        bars[gt_idx].set_edgecolor('gold')
-        bars[gt_idx].set_linewidth(3)
+    plt.suptitle('🎮 REALISTIC GAME THEORY: Auto-Discovery vs Traditional Methods', 
+                fontsize=16, fontweight='bold', y=0.98)
     
     plt.tight_layout()
     plt.show()
+    
+    print("📊 Realistic auto-discovery visualization complete!")
 
-# Create visualizations
-create_clustering_visualization(X_processed, clustering_results, performance_df)
-
-# ============================================================================
-# 🎯 BUSINESS INSIGHTS
-# ============================================================================
-
-def generate_business_insights(df, labels, method_name="Game Theory"):
-    """Generate practical business insights from clustering results."""
-    print(f"\n💼 BUSINESS INSIGHTS: {method_name} Clustering Results")
-    print("=" * 65)
-    
-    # Add cluster labels to dataframe
-    df_clustered = df.copy()
-    df_clustered['cluster'] = labels
-    
-    n_clusters = len(np.unique(labels))
-    
-    print(f"📊 CLUSTER SUMMARY:")
-    print(f"   • Total Clusters: {n_clusters}")
-    print(f"   • Avg Cluster Size: {len(df) / n_clusters:.1f} invoices")
-    
-    # Analyze each cluster
-    for cluster_id in np.unique(labels):
-        cluster_data = df_clustered[df_clustered['cluster'] == cluster_id]
-        size = len(cluster_data)
-        
-        print(f"\n🎯 CLUSTER {cluster_id} ({size} invoices):")
-        
-        # Key characteristics
-        top_material = cluster_data['material'].mode().iloc[0] if not cluster_data['material'].mode().empty else 'Mixed'
-        top_vendor = cluster_data['vendor'].mode().iloc[0] if not cluster_data['vendor'].mode().empty else 'Mixed'
-        top_country = cluster_data['country_of_origin'].mode().iloc[0] if not cluster_data['country_of_origin'].mode().empty else 'Mixed'
-        
-        avg_amount = cluster_data['total_amount'].mean()
-        avg_quantity = cluster_data['quantity'].mean()
-        avg_payment_days = cluster_data['payment_days'].mean()
-        
-        print(f"   • Primary Material: {top_material}")
-        print(f"   • Main Vendor: {top_vendor}")
-        print(f"   • Primary Country: {top_country}")
-        print(f"   • Avg Invoice Value: ${avg_amount:,.2f}")
-        print(f"   • Avg Quantity: {avg_quantity:.0f}")
-        print(f"   • Avg Payment Terms: {avg_payment_days:.0f} days")
-        
-        # Business interpretation
-        if size == 1:
-            print(f"   💡 INSIGHT: Unique/outlier invoice - review for special handling")
-        elif size < 5:
-            print(f"   💡 INSIGHT: Small specialized group - potential niche supplier")
-        elif avg_amount > df['total_amount'].quantile(0.75):
-            print(f"   💡 INSIGHT: High-value cluster - priority supplier management")
-        elif avg_payment_days > 60:
-            print(f"   💡 INSIGHT: Extended payment terms - cash flow consideration")
-        else:
-            print(f"   💡 INSIGHT: Standard procurement pattern - routine processing")
-    
-    print(f"\n🏆 BUSINESS RECOMMENDATIONS:")
-    
-    # Strategic recommendations
-    high_value_clusters = []
-    specialized_clusters = []
-    standard_clusters = []
-    
-    for cluster_id in np.unique(labels):
-        cluster_data = df_clustered[df_clustered['cluster'] == cluster_id]
-        avg_amount = cluster_data['total_amount'].mean()
-        size = len(cluster_data)
-        
-        if avg_amount > df['total_amount'].quantile(0.75):
-            high_value_clusters.append(cluster_id)
-        elif size < 5:
-            specialized_clusters.append(cluster_id)
-        else:
-            standard_clusters.append(cluster_id)
-    
-    if high_value_clusters:
-        print(f"   💰 Focus on clusters {high_value_clusters}: High-value supplier relationships")
-    if specialized_clusters:
-        print(f"   🎯 Monitor clusters {specialized_clusters}: Specialized/niche suppliers")
-    if standard_clusters:
-        print(f"   🔄 Optimize clusters {standard_clusters}: Standard procurement automation")
-    
-    print(f"   📈 Implement differentiated supplier strategies by cluster")
-    print(f"   🤝 Negotiate cluster-specific payment terms and volumes")
-
-# Generate business insights for Game Theory results
-gt_labels = clustering_results['Game Theory']
-generate_business_insights(df, gt_labels, "Game Theory")
-
-# ============================================================================
-# 🎓 EDUCATIONAL SUMMARY
-# ============================================================================
+# Create realistic visualization
+create_realistic_visualization(X_processed, clustering_results, performance_df, gt_model)
 
 print("\n" + "=" * 75)
 print("🎮 🏆 REALISTIC AUTO-OPTIMAL GAME THEORY CLUSTERING COMPLETE!")
@@ -818,7 +738,6 @@ print("""
 • Threshold optimization based on Game Theory metrics
 • Fair comparison with other auto-optimal methods
 • Coalition formation driven by natural data structure
-• Practical business insights and recommendations
 
 🏆 REAL-WORLD APPLICABILITY:
 • Works without knowing optimal cluster count
@@ -826,34 +745,12 @@ print("""
 • Competes with traditional auto-optimal methods
 • Provides interpretable coalition-based results
 • Scales to real business clustering problems
-• Generates actionable business insights
 
-🎮 GAME THEORY CONCEPTS APPLIED:
-• Players: Individual data points (invoices)
-• Coalitions: Clusters of similar invoices
-• Coalition Stability: Internal cohesion vs external attraction
-• Utility Function: Based on internal similarity and cluster cohesion
-• Shapley Values: Fair allocation weighted by stability
-• Threshold Selection: Multi-criteria Game Theory optimization
-
-🔬 ENHANCED ALGORITHMIC FEATURES:
-• Adaptive Shapley value computation with stability weighting
-• Multi-criteria threshold selection (stability + balance + size)
-• Intelligent coalition formation with utility-based assignment
-• Coalition stability analysis for auto-discovery
-• Business-relevant cluster interpretation
-
-🎉 CONCLUSION:
-This demonstrates Game Theory clustering in realistic conditions where cluster 
-count is unknown - just like real business scenarios! The method automatically 
-discovers optimal coalitions using principled Game Theory criteria.
+🎮 This demonstrates Game Theory clustering in realistic conditions
+   where cluster count is unknown - just like real business scenarios!
 """)
 
-gt_clusters = len(np.unique(clustering_results['Game Theory']))
+gt_clusters = performance_df[performance_df['Method'] == 'Game Theory']['N_Clusters'].iloc[0]
 print(f"\n🔍 DISCOVERED: Game Theory found {gt_clusters} natural coalitions")
 print(f"📊 Coalition stability: {gt_model.calculate_clustering_stability(gt_model.labels_):.3f}")
-print("✅ SUCCESS: Realistic auto-discovery without prior knowledge!")
-print("💼 BONUS: Practical business insights generated for immediate action!")
-
-print("\n✅ Demo completed! Copy this script to Google Colab for interactive execution.")
-print("🎮 Based on MIT Research: https://www.mit.edu/~vgarg/tkde-final.pdf") 
+print("✅ SUCCESS: Realistic auto-discovery without prior knowledge!") 
